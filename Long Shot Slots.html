@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Long Shot Slots</title>
+<style>
+:root{
+  --bg:#1b1226; --panel:#2a1b3d; --reel:#fff7e6; --ink:#fff7e6; --muted:#b9a8d0;
+  --accent:#ffb400; --accent-ink:#2a1b00; --win:#4be38a; --lose:#ff7a8a;
+  --glow1:rgba(255,180,0,.28); --glow2:rgba(190,80,255,.32); --dot:rgba(255,247,230,.07);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){--bg:#f3ecfa;--panel:#dccbee;--reel:#ffffff;--ink:#2a1b3d;--muted:#5d4a78;--accent:#c47f00;--accent-ink:#fff;--win:#0f8a4a;--lose:#b3263a;--glow1:rgba(255,190,60,.55);--glow2:rgba(190,110,255,.45);--dot:rgba(42,27,61,.08);}
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background-color:var(--bg);background-image:radial-gradient(circle at 50% 18%,var(--glow1),transparent 45%),radial-gradient(circle at 85% 90%,var(--glow2),transparent 50%),radial-gradient(circle at 12% 80%,var(--glow2),transparent 40%),radial-gradient(var(--dot) 1.5px,transparent 1.5px);background-size:auto,auto,auto,22px 22px;background-attachment:fixed;color:var(--ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;padding:16px}
+.machine{width:100%;max-width:420px;background:var(--panel);border-radius:24px;padding:24px;text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.25)}
+h1{margin:0 0 4px;font-size:1.6rem;letter-spacing:.02em}
+.promise{margin:0 0 16px;color:var(--muted);font-size:.95rem}
+.credits{font-size:1.2rem;margin-bottom:16px}
+.credits b{font-size:2rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.reels{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+.reel{flex:1;aspect-ratio:1;background:var(--reel);border-radius:14px;display:grid;place-items:center;font-size:clamp(2.4rem,14vw,3.6rem);box-shadow:inset 0 4px 10px rgba(0,0,0,.25)}
+.reel.spin{animation:blur .12s linear infinite}
+@keyframes blur{50%{transform:translateY(4px);filter:blur(1.5px)}}
+@media (prefers-reduced-motion: reduce){.reel.spin{animation:none;opacity:.6}}
+button{font:inherit;font-weight:700;font-size:1.1rem;border:0;border-radius:999px;padding:14px 36px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.msg{min-height:1.6em;margin:16px 0 0;font-weight:700}
+.msg.win{color:var(--win)}.msg.lose{color:var(--lose)}
+.odds{margin:12px 0 0;color:var(--muted);font-size:.8rem}
+.pt{margin-top:12px;color:var(--muted);font-size:.9rem}
+.pt summary{cursor:pointer}
+.pt table{margin:8px auto 0;border-collapse:collapse;width:60%;min-width:200px}
+.pt td{padding:4px 8px;border-bottom:1px solid rgba(128,128,128,.3)}
+.pt td:last-child{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:700}
+</style>
+</head>
+<body>
+<main class="machine">
+  <h1>Long Shot Slots</h1>
+  <p class="promise">Line up three 7️⃣ to win 100 credits.</p>
+  <div class="credits">Credits: <b id="credits">10</b></div>
+  <div class="reels" aria-live="polite">
+    <div class="reel" id="r0">🍒</div>
+    <div class="reel" id="r1">🍋</div>
+    <div class="reel" id="r2">🔔</div>
+  </div>
+  <button id="spin">Spin (1 credit)</button>
+  <p class="msg" id="msg">Good luck!</p>
+  <p class="odds">Pays on about 1 in 3 spins. Jackpot: 1 in 17,576. Return: about 92.6%.</p>
+  <details class="pt"><summary>Pay table</summary>
+    <table>
+      <tr><td>7️⃣ 7️⃣ 7️⃣</td><td>100</td></tr>
+      <tr><td>⭐ ⭐ ⭐</td><td>30</td></tr>
+      <tr><td>🍀 🍀 🍀</td><td>18</td></tr>
+      <tr><td>🔔 🔔 🔔</td><td>12</td></tr>
+      <tr><td>🍋 🍋 🍋</td><td>8</td></tr>
+      <tr><td>🍒 🍒 🍒</td><td>6</td></tr>
+      <tr><td>Any two 🍒</td><td>2</td></tr>
+      <tr><td>Any one 🍒</td><td>1</td></tr>
+    </table>
+  </details>
+</main>
+<script>
+// Weighted reels (same on all 3): rarer symbols pay more. Totals ~92.6% return.
+const WEIGHTS={"🍒":9,"🍋":22,"🔔":20,"🍀":16,"⭐":8,"7️⃣":3};
+const SYMBOLS=Object.keys(WEIGHTS);
+const TOTAL=SYMBOLS.reduce((a,s)=>a+WEIGHTS[s],0);
+const PAY3={"7️⃣":100,"⭐":30,"🍀":18,"🔔":12,"🍋":8,"🍒":6};
+const START=10, COST=1;
+let credits=START, spinning=false;
+const $=id=>document.getElementById(id);
+const rand=()=>{let n=Math.random()*TOTAL;for(const s of SYMBOLS){n-=WEIGHTS[s];if(n<0)return s;}return SYMBOLS[0];};
+
+function payout(r){
+  if(r[0]===r[1]&&r[1]===r[2])return PAY3[r[0]];
+  const c=r.filter(s=>s==="🍒").length;
+  return c===2?2:c===1?1:0;
+}
+function outcome(){
+  // Each reel is an independent weighted random draw, like a real machine.
+  const r=[rand(),rand(),rand()];
+  const pay=payout(r);
+  
+  return{pay,reels:r};
+}
+function setMsg(t,c){const m=$("msg");m.textContent=t;m.className="msg "+(c||"");}
+function render(){$("credits").textContent=credits;}
+
+function spin(){
+  if(spinning)return;
+  if(credits<COST){reset();return;}
+  spinning=true;credits-=COST;render();
+  $("spin").disabled=true;setMsg("Spinning…");
+  const res=outcome();
+  const reels=[0,1,2].map(i=>$("r"+i));
+  reels.forEach(r=>r.classList.add("spin"));
+  const timer=setInterval(()=>reels.forEach(r=>{if(r.classList.contains("spin"))r.textContent=rand();}),90);
+  reels.forEach((r,i)=>setTimeout(()=>{
+    r.classList.remove("spin");r.textContent=res.reels[i];
+    if(i===2){clearInterval(timer);finish(res);}
+  },800+i*500));
+}
+function finish(res){
+  spinning=false;
+  if(res.pay>0){credits+=res.pay;setMsg(res.pay>=100?"JACKPOT! You won "+res.pay+" credits!":"You won "+res.pay+(res.pay===1?" credit.":" credits."),"win");}
+  else setMsg("No match. Try again.","lose");
+  render();
+  const b=$("spin");b.disabled=false;
+  if(credits<COST){setMsg("Out of credits. Press to start over.","lose");b.textContent="Start over";}
+}
+function reset(){credits=START;render();$("spin").textContent="Spin (1 credit)";setMsg("Fresh start. Good luck!");}
+$("spin").addEventListener("click",spin);
+</script>
+</body>
+</html>
